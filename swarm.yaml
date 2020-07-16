@@ -1,0 +1,7 @@
+version: "3.7"
+
+services:
+  base-app:
+    image: gcr.io/shining-rampart/base-image:latest
+    ports:
+      - "80:8080"
