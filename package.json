@@ -1,12 +1,39 @@
 {
-  "name": "base",
+  "name": "fleck.js",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "./dist/fleck.js",
   "license": "MIT",
+  "scripts": {
+    "build": "rimraf dist && rollup -c",
+    "fleck": "node -r esm ./bin/cli.js"
+  },
   "dependencies": {
+    "@koa/router": "^9.3.1",
+    "consola": "^2.14.0",
+    "klaw": "^3.0.0",
     "koa": "^2.13.0",
+    "koa-hbs": "^1.0.0",
     "koa-json": "^2.0.2",
     "koa-logger": "^3.2.1",
-    "koa-router": "^9.1.0"
+    "koa-mount": "^4.0.0",
+    "koa-router": "^9.1.0",
+    "koa-send": "^5.0.1",
+    "nodemon": "^2.0.4",
+    "through2": "^4.0.2"
+  },
+  "bin": {
+    "fleck": "./bin/cli.js"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.10.5",
+    "@babel/core": "^7.11.1",
+    "@babel/node": "^7.10.5",
+    "@babel/preset-env": "^7.11.0",
+    "@babel/register": "^7.10.5",
+    "esm": "^3.2.25",
+    "gulp": "^4.0.2",
+    "gulp-babel": "^8.0.0-beta.2",
+    "rimraf": "^3.0.2",
+    "rollup": "^2.23.0"
   }
 }
