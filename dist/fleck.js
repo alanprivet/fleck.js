@@ -21,17 +21,19 @@ function _interopNamespace(e) {
   }
 }
 
+require('fs-extra');
 const Koa = _interopDefault(require('koa'));
+const json = _interopDefault(require('koa-json'));
+const logger = _interopDefault(require('koa-logger'));
+const mount = _interopDefault(require('koa-mount'));
+const path = _interopDefault(require('path'));
+const serve = _interopDefault(require('koa-static'));
+const ip = _interopDefault(require('ip'));
 const fs = _interopDefault(require('fs'));
 const klaw = _interopDefault(require('klaw'));
-const path = _interopDefault(require('path'));
 const hbs = _interopDefault(require('koa-hbs'));
 const Router = _interopDefault(require('koa-router'));
 const through2 = _interopDefault(require('through2'));
-const logger = _interopDefault(require('koa-logger'));
-const json = _interopDefault(require('koa-json'));
-const send = _interopDefault(require('koa-send'));
-const mount = _interopDefault(require('koa-mount'));
 
 function loadConfig() {
 
@@ -41,6 +43,7 @@ function loadConfig() {
 
   options.cwd = process.cwd();
 
+  options.publicDir = path.join(options.cwd, 'static');
   options.pagesDir = path.join(options.cwd, 'pages');
 
   return options
@@ -66,19 +69,19 @@ if (fs.existsSync(path.join(config.cwd, 'partials'))) {
   hbs.partialsPath = path.join(config.cwd, 'partials');
 }
 
-const excludeDirFilter = through2.obj(function (item, enc, next) {
+const excludeDirFilter = through2.obj(function (item, e, next) {
   if (!item.stats.isDirectory()) this.push(item);
   next();
 });
 
-const excludeJsFilter = through2.obj(function (item, enc, next) {
-  if (!item.path.endsWith('.js')) this.push(item);
+const hbsOnlyFilter = through2.obj(function (item, e, next) {
+  if (item.path.endsWith('.hbs')) this.push(item);
   next();
 });
 
 klaw(config.pagesDir)
   .pipe(excludeDirFilter)
-  .pipe(excludeJsFilter)
+  .pipe(hbsOnlyFilter)
   .on('data', async (i) => {
     const _path = i.path.split(config.pagesDir)[1].split('.hbs')[0].slice(1);
     const _route = _path.endsWith('index') ? path.posix.join('/', _path, '..') : path.posix.join('/', _path);
@@ -87,46 +90,15 @@ klaw(config.pagesDir)
       .then((_module) => {
         router.get(_route, async (ctx, next) => { _module.default(ctx); await next(); });
       })
-      .catch((error) => {});
+      .catch((error) => {
+        if (error.code === 'MODULE_NOT_FOUND') ;
+        else {
+          console.log(error);
+        }
+      });
     
     router.get(_route, async (ctx, next) => { await ctx.render(_path); });
   });
-
-// function generatePagesRoutingConfiguration ({ dir = '', pagesDir = config.pagesDir }) {
-
-//   const files = fs.readdirSync(path.join(pagesDir, dir), { withFileTypes: true })
-
-//   files.forEach(async (dirEntry) => {
-//     let route, middleware, templatePath;
-//     const template = dirEntry.name.split('.hbs')[0]
-//     const pathname = (template === 'index') ? '' : `${template}`
-
-//     if (dirEntry.isFile() && dirEntry.name.endsWith('.hbs')) {
-
-//       route = dir ? path.join('/', dir, pathname) : '/';
-
-//       if (fs.existsSync(path.join(pagesDir, dir, `${template}.js`))) {
-//         middleware = (await import(path.join(pagesDir, dir, template))).default
-//       }
-
-//       templatePath = dir ? `${dir}/${template}` : template;
-
-//       console.log(middleware, route, templatePath)
-//       router.get(
-//         route,
-//         async (ctx, next) => { middleware(ctx); await next() },
-//         async (ctx, next) => { await ctx.render(templatePath) }
-//       )
-
-//     } else if (dirEntry.isDirectory()) {
-//       generatePagesRoutingConfiguration({
-//         dir: dir ? `${dir}/${dirEntry.name}` : dirEntry.name,
-//       })
-//     }
-//   })
-// }
-
-// generatePagesRoutingConfiguration({})
 
 pages.use(router.routes()).use(router.allowedMethods());
 
@@ -137,8 +109,12 @@ app.use(json());
 
 app.use(mount(pages));
 
-app.use(async (ctx) => {
-  await send(ctx, ctx.path, { root: process.cwd() + '/public' });
-});
+/**
+ * Serve files from public directory
+ */
+app.use(serve(config.publicDir));
+app.use(serve(path.join(config.cwd, 'assets')));
 
-app.listen(8080);
+app.listen(8080, 0, function () {
+  console.log(`http://${ip.address()}:${this.address().port}`);
+});

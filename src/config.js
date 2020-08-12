@@ -1,6 +1,6 @@
 import path from 'path'
 
-export default function loadConfig() {
+function loadConfig() {
 
   let options = {}
 
@@ -8,8 +8,11 @@ export default function loadConfig() {
 
   options.cwd = process.cwd()
 
+  options.publicDir = path.join(options.cwd, 'static')
   options.pagesDir = path.join(options.cwd, 'pages')
 
   return options
 
 }
+
+export default loadConfig()

@@ -5,9 +5,7 @@ import path from 'path'
 import hbs from 'koa-hbs'
 import Router from 'koa-router'
 import through2 from 'through2'
-import loadConfig from './config'
-
-const config = loadConfig()
+import config from './config'
 
 const pages = new Koa()
 const router = new Router()
@@ -26,19 +24,19 @@ if (fs.existsSync(path.join(config.cwd, 'partials'))) {
   hbs.partialsPath = path.join(config.cwd, 'partials')
 }
 
-const excludeDirFilter = through2.obj(function (item, enc, next) {
+const excludeDirFilter = through2.obj(function (item, e, next) {
   if (!item.stats.isDirectory()) this.push(item)
   next()
 })
 
-const excludeJsFilter = through2.obj(function (item, enc, next) {
-  if (!item.path.endsWith('.js')) this.push(item)
+const hbsOnlyFilter = through2.obj(function (item, e, next) {
+  if (item.path.endsWith('.hbs')) this.push(item)
   next()
 })
 
 klaw(config.pagesDir)
   .pipe(excludeDirFilter)
-  .pipe(excludeJsFilter)
+  .pipe(hbsOnlyFilter)
   .on('data', async (i) => {
     const _path = i.path.split(config.pagesDir)[1].split('.hbs')[0].slice(1)
     const _route = _path.endsWith('index') ? path.posix.join('/', _path, '..') : path.posix.join('/', _path)
@@ -47,7 +45,12 @@ klaw(config.pagesDir)
       .then((_module) => {
         router.get(_route, async (ctx, next) => { _module.default(ctx); await next() })
       })
-      .catch((error) => {})
+      .catch((error) => {
+        if (error.code === 'MODULE_NOT_FOUND') {}
+        else {
+          console.log(error)
+        }
+      })
     
     router.get(_route, async (ctx, next) => { await ctx.render(_path) })
   })
