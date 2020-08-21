@@ -10,6 +10,8 @@
   "dependencies": {
     "@koa/router": "^9.3.1",
     "consola": "^2.14.0",
+    "express": "^4.17.1",
+    "express-hbs": "^2.3.4",
     "fs-extra": "^9.0.1",
     "ip": "^1.1.5",
     "klaw": "^3.0.0",
@@ -21,6 +23,7 @@
     "koa-router": "^9.1.0",
     "koa-send": "^5.0.1",
     "koa-static": "^5.0.0",
+    "morgan": "^1.10.0",
     "nodemon": "^2.0.4",
     "through2": "^4.0.2"
   },

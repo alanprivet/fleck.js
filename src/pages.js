@@ -1,28 +1,20 @@
-import fs from 'fs'
 import klaw from 'klaw'
-import Koa from 'koa'
+import express from 'express'
 import path from 'path'
-import hbs from 'koa-hbs'
-import Router from 'koa-router'
+import hbs from 'express-hbs'
 import through2 from 'through2'
 import config from './config'
 
-const pages = new Koa()
-const router = new Router()
+const pages = new express()
 
-pages.use(hbs.middleware({
-  viewPath: config.pagesDir,
-  defaultLayout: 'default',
-  disableCache: config.dev
+pages.engine('hbs', hbs.express4({
+  defaultLayout: path.join(config.cwd, 'layouts/default'),
+  layoutsDir: path.join(config.cwd, 'layouts'),
+  partialsDir: path.join(config.cwd, 'partials'),
 }))
 
-if (fs.existsSync(path.join(config.cwd, 'layouts'))) {
-  hbs.layoutsPath = path.join(config.cwd, 'layouts')
-}
-
-if (fs.existsSync(path.join(config.cwd, 'partials'))) {
-  hbs.partialsPath = path.join(config.cwd, 'partials')
-}
+pages.set('view engine', 'hbs')
+pages.set('views', path.join(config.cwd, 'pages'))
 
 const excludeDirFilter = through2.obj(function (item, e, next) {
   if (!item.stats.isDirectory()) this.push(item)
@@ -43,7 +35,7 @@ klaw(config.pagesDir)
 
     await import(path.resolve(config.pagesDir, `${_path}.js`))
       .then((_module) => {
-        router.get(_route, async (ctx, next) => { _module.default(ctx); await next() })
+        pages.get(_route, _module.default)
       })
       .catch((error) => {
         if (error.code === 'MODULE_NOT_FOUND') {}
@@ -51,10 +43,10 @@ klaw(config.pagesDir)
           console.log(error)
         }
       })
-    
-    router.get(_route, async (ctx, next) => { await ctx.render(_path) })
-  })
 
-pages.use(router.routes()).use(router.allowedMethods())
+    console.log(_route)
+    
+    pages.get(_route, async (req, res, next) => { res.render(_path, res.locals) })
+  })
 
 export default pages
